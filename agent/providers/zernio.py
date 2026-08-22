@@ -16,7 +16,7 @@ class ZernioProvider(BaseProvider):
         if not self.api_key:
             raise ValueError("ZERNIO_API_KEY environment variable not set")
         
-        self.base_url = "https://api.zernio.com"
+        self.base_url = "https://zernio.com/api/v1"
         self.client = httpx.AsyncClient(
             headers={"Authorization": f"Bearer {self.api_key}"}
         )
@@ -24,43 +24,51 @@ class ZernioProvider(BaseProvider):
     def parse_webhook(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Parse Zernio webhook payload."""
         try:
-            if payload.get("type") != "message":
-                logger.debug(f"Ignoring webhook type: {payload.get('type')}")
+            if payload.get("event") != "message.received":
+                logger.debug(f"Ignoring webhook event: {payload.get('event')}")
                 return None
             
             message = payload.get("message", {})
-            text = message.get("text", "").strip()
             
+            if message.get("direction") != "incoming":
+                logger.debug("Ignoring non-incoming message")
+                return None
+            
+            text = message.get("text", "").strip()
             if not text:
                 logger.debug("Ignoring empty message")
                 return None
             
+            sender = message.get("sender", {})
+            account = payload.get("account", {})
+            
             return {
-                "user_id": message.get("from", "unknown"),
-                "user_name": message.get("name", "Cliente"),
-                "message": text
+                "user_id": sender.get("id") or sender.get("phoneNumber", "unknown"),
+                "user_name": sender.get("name", "Cliente"),
+                "message": text,
+                "conversation_id": message.get("conversationId"),
+                "account_id": account.get("id")
             }
         except Exception as e:
             logger.error(f"Error parsing Zernio webhook: {e}")
             return None
     
-    async def send_message(self, user_id: str, message: str) -> bool:
-        """Send a message via Zernio API."""
+    async def send_message(self, conversation_id: str, account_id: str, message: str) -> bool:
+        """Send a message via Zernio API (unified inbox endpoint)."""
         try:
             payload = {
-                "to": user_id,
-                "text": message,
-                "type": "text"
+                "accountId": account_id,
+                "message": message
             }
             
             response = await self.client.post(
-                f"{self.base_url}/send-message",
+                f"{self.base_url}/inbox/conversations/{conversation_id}/messages",
                 json=payload,
                 timeout=10.0
             )
             
             if response.status_code in [200, 201]:
-                logger.info(f"Message sent to {user_id} via Zernio")
+                logger.info(f"Message sent to conversation {conversation_id} via Zernio")
                 return True
             else:
                 logger.error(f"Zernio API error: {response.status_code} - {response.text}")
