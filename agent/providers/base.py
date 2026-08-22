@@ -11,6 +11,6 @@ class BaseProvider(ABC):
         pass
     
     @abstractmethod
-    async def send_message(self, user_id: str, message: str) -> bool:
+    async def send_message(self, conversation_id: str, account_id: str, message: str) -> bool:
         """Send a message to the user via the provider."""
         pass
