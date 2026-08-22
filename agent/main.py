@@ -51,6 +51,8 @@ async def webhook(request: Request):
         user_id = message_data.get("user_id")
         user_name = message_data.get("user_name", "Cliente")
         user_message = message_data.get("message", "")
+        conversation_id = message_data.get("conversation_id")
+        account_id = message_data.get("account_id")
         
         logger.info(f"Processing message from {user_name} (ID: {user_id}): {user_message}")
         
@@ -66,7 +68,7 @@ async def webhook(request: Request):
         memory.save_conversation(user_id, conversation)
         
         # Send response via Zernio
-        success = await provider.send_message(user_id, response)
+        success = await provider.send_message(conversation_id, account_id, response)
         
         if success:
             logger.info(f"Response sent to {user_name}")
