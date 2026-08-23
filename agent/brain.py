@@ -68,8 +68,8 @@ class AgentBrain:
                 system=self.system_prompt,
                 messages=messages
             )
-            logger.info(f"RAW RESPONSE: {response}")
-            assistant_message = response.content[0].text
+            
+            assistant_message = next((block.text for block in response.content if block.type == "text"), None)
             logger.info(f"Claude response: {assistant_message[:100]}...")
             
             return assistant_message
