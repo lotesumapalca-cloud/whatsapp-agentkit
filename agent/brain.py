@@ -18,7 +18,7 @@ class AgentBrain:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
         
         self.client = Anthropic()
-        self.model = "claude-3-5-sonnet-20241022"
+        self.model = "claude-sonnet-5"
         
         # Get system prompt from environment or use default
         self.system_prompt = os.getenv("SYSTEM_PROMPT", self._default_system_prompt())
