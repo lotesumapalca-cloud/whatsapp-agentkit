@@ -68,7 +68,7 @@ class AgentBrain:
                 system=self.system_prompt,
                 messages=messages
             )
-            
+            logger.info(f"RAW RESPONSE: {response}")
             assistant_message = response.content[0].text
             logger.info(f"Claude response: {assistant_message[:100]}...")
             
