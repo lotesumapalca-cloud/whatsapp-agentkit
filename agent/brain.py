@@ -3,6 +3,7 @@ Claude AI brain for RYC Inmobiliaria WhatsApp Agent.
 Handles conversation logic and integrates with Anthropic API.
 """
 import os
+import yaml
 import logging
 from anthropic import Anthropic
 
@@ -18,30 +19,38 @@ class AgentBrain:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
         
         self.client = Anthropic()
-        self.model = "claude-sonnet-5"
+        self.model = "claude-3-5-sonnet-20241022"
         
-        # Get system prompt from environment or use default
-        self.system_prompt = os.getenv("SYSTEM_PROMPT", self._default_system_prompt())
+        # Get system prompt from config file, environment, or hardcoded default
+        self.system_prompt = self._load_system_prompt()
+    
+    def _load_system_prompt(self) -> str:
+        """Load system prompt from config/prompts.yaml, env, or use default."""
+        # Try config file first
+        config_path = "config/prompts.yaml"
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r') as f:
+                    config = yaml.safe_load(f)
+                    if config and 'system_prompt' in config:
+                        logger.info("Loaded system_prompt from config/prompts.yaml")
+                        return config['system_prompt']
+            except Exception as e:
+                logger.warning(f"Error loading config file: {e}, falling back to env")
+        
+        # Try environment variable
+        env_prompt = os.getenv("SYSTEM_PROMPT")
+        if env_prompt:
+            logger.info("Loaded system_prompt from SYSTEM_PROMPT env var")
+            return env_prompt
+        
+        # Use hardcoded default
+        logger.info("Using default system_prompt")
+        return self._default_system_prompt()
     
     def _default_system_prompt(self) -> str:
         """Default system prompt for RYC Inmobiliaria if not configured."""
-        return """Eres un agente de ventas para RYC Inmobiliaria, empresa especializada en venta de terrenos en Umapalca y Sabandía.
-
-Tu objetivo es ayudar a clientes potenciales a:
-1. Conocer las propiedades disponibles
-2. Responder preguntas sobre ubicación, tamaño y precio
-3. Agendar citas para visitas
-4. Proporcionar información sobre el proceso de compra
-
-Sé amable, profesional y conciso. Responde en español. Si el cliente pregunta algo fuera de tu alcance, ofrece transferirlo a un representante humano.
-
-Información clave:
-- Ubicaciones: Umapalca y Sabandía (zonas residenciales de calidad)
-- Especializamos en terrenos para vivienda y desarrollo inmobiliario
-- Proceso de compra transparente y asesoría legal incluida
-- Horario: Lunes a viernes 8am-6pm, Sábados 10am-2pm
-
-Siempre sé honesto sobre disponibilidad y detalles de propiedades."""
+        return """Te llamas Julio, eres el Asesor Virtual de RYC Inmobiliaria."""
     
     async def get_response(self, user_message: str, conversation_history: list, user_name: str = "Cliente") -> str:
         """
@@ -59,15 +68,7 @@ Siempre sé honesto sobre disponibilidad y detalles de propiedades."""
                 messages=messages
             )
             
-            assistant_message = None
-            for block in response.content:
-                if getattr(block, "type", None) == "text":
-                    assistant_message = block.text
-                    break
-            
-            if not assistant_message:
-                assistant_message = "Disculpa, no pude generar una respuesta clara. ¿Podrías reformular tu pregunta?"
-            
+            assistant_message = response.content[0].text
             logger.info(f"Claude response: {assistant_message[:100]}...")
             
             return assistant_message
