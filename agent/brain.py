@@ -58,6 +58,7 @@ class AgentBrain:
         """
         try:
             messages = conversation_history[-20:]
+            messages.append({"role": "user", "content": user_message}
             
             logger.info(f"Calling Claude for user {user_name}")
             
