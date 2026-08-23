@@ -59,7 +59,16 @@ Siempre sé honesto sobre disponibilidad y detalles de propiedades."""
                 messages=messages
             )
             
-            assistant_message = None for block in response.content: if getattr(block, "type", None) == "text": assistant_message = block.text break if not assistant_message: assistant_message = "Disculpa, no pude generar una respuesta clara. ¿Podrías reformular tu pregunta?" logger.info(f"Claude response: {assistant_message[:100]}...")
+            assistant_message = None
+            for block in response.content:
+                if getattr(block, "type", None) == "text":
+                    assistant_message = block.text
+                    break
+            
+            if not assistant_message:
+                assistant_message = "Disculpa, no pude generar una respuesta clara. ¿Podrías reformular tu pregunta?"
+            
+            logger.info(f"Claude response: {assistant_message[:100]}...")
             
             return assistant_message
             
