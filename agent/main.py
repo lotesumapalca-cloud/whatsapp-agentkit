@@ -57,6 +57,11 @@ async def webhook(request: Request):
 
         response = await brain.get_response(user_message, conversation, user_name)
 
+        already_notified = any(
+            msg.get("role") == "assistant" and "cruce de characato" in msg.get("content", "").lower()
+            for msg in conversation
+        )
+
         conversation.append({"role": "assistant", "content": response})
         memory.save_conversation(user_id, conversation)
 
@@ -66,7 +71,7 @@ async def webhook(request: Request):
             logger.info(f"Response sent to {user_name}")
 
             advisor_conversation_id = os.getenv("ADVISOR_CONVERSATION_ID")
-            if advisor_conversation_id and "cruce de characato" in response.lower():
+            if advisor_conversation_id and not already_notified and "cruce de characato" in response.lower():
                 notification = f"Nueva cita agendada\nCliente: {user_name}\nMensaje del cliente: {user_message}\nConfirmacion del bot: {response}"
                 await provider.send_message(advisor_conversation_id, account_id, notification)
                 logger.info("Advisor notified of new appointment")
