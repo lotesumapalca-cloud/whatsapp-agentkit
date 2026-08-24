@@ -62,4 +62,38 @@ async def webhook(request: Request):
 
         success = await provider.send_message(conversation_id, account_id, response)
 
-        if
+        if success:
+            logger.info(f"Response sent to {user_name}")
+
+            advisor_conversation_id = os.getenv("ADVISOR_CONVERSATION_ID")
+            if advisor_conversation_id and "cruce de characato" in response.lower():
+                notification = f"Nueva cita agendada\nCliente: {user_name}\nMensaje del cliente: {user_message}\nConfirmacion del bot: {response}"
+                await provider.send_message(advisor_conversation_id, account_id, notification)
+                logger.info("Advisor notified of new appointment")
+
+            return JSONResponse({"status": "success"}, status_code=200)
+        else:
+            logger.error(f"Failed to send response to {user_name}")
+            return JSONResponse({"status": "error"}, status_code=500)
+
+    except Exception as e:
+        logger.error(f"Error processing webhook: {str(e)}", exc_info=True)
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+@app.post("/webhook/status")
+async def webhook_status(request: Request):
+    """Optional: webhook for message delivery status updates from Zernio."""
+    try:
+        payload = await request.json()
+        logger.info(f"Status update: {json.dumps(payload, indent=2)}")
+        return JSONResponse({"status": "acknowledged"}, status_code=200)
+    except Exception as e:
+        logger.error(f"Error processing status webhook: {str(e)}")
+        return JSONResponse({"status": "error"}, status_code=500)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
